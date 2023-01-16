@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: RaymanoPL <raymanowy@gmail.com>
+Date: Sun, 20 Nov 2022 01:05:48 +0100
+Subject: [PATCH] Add-Method-Get-Block-In-Player-Bucket-Event
+
+
+diff --git a/src/main/java/org/bukkit/event/player/PlayerBucketEmptyEvent.java b/src/main/java/org/bukkit/event/player/PlayerBucketEmptyEvent.java
+index 8fb121a917e82c3fb08186e477f368a77728bc53..5d7e609d07fd9c500ff2258c2a26db68b2f1695c 100644
+--- a/src/main/java/org/bukkit/event/player/PlayerBucketEmptyEvent.java
++++ b/src/main/java/org/bukkit/event/player/PlayerBucketEmptyEvent.java
+@@ -11,10 +11,27 @@ import org.bukkit.inventory.ItemStack;
+  * Called when a player empties a bucket
+  */
+ public class PlayerBucketEmptyEvent extends PlayerBucketEvent {
++
++    private final Block block;
+     private static final HandlerList handlers = new HandlerList();
+ 
++    @Deprecated
+     public PlayerBucketEmptyEvent(final Player who, final Block blockClicked, final BlockFace blockFace, final Material bucket, final ItemStack itemInHand) {
+-        super(who, blockClicked, blockFace, bucket, itemInHand);
++        this(who, null, blockClicked, blockFace, bucket, itemInHand);
++    }
++
++    public PlayerBucketEmptyEvent(Player player, Block block, Block blockClicked, BlockFace blockFace, Material bucket, ItemStack itemInHand) {
++        super(player, blockClicked, blockFace, bucket, itemInHand);
++        this.block = block;
++    }
++    /**
++     * Gets the block involved in this event.
++     *
++     * @return The Block which block is involved in this event
++     */
++    @Override
++    public Block getBlock() {
++        return block;
+     }
+ 
+     @Override
+diff --git a/src/main/java/org/bukkit/event/player/PlayerBucketEvent.java b/src/main/java/org/bukkit/event/player/PlayerBucketEvent.java
+index 56584687f9a59984be0466bf82a03c4fb6f61d18..e8a2fec063de62635205a04443e61bc80b54d1ad 100644
+--- a/src/main/java/org/bukkit/event/player/PlayerBucketEvent.java
++++ b/src/main/java/org/bukkit/event/player/PlayerBucketEvent.java
+@@ -70,6 +70,15 @@ public abstract class PlayerBucketEvent extends PlayerEvent implements Cancellab
+         return blockFace;
+     }
+ 
++    /**
++     * Gets the block involved in this event.
++     *
++     * @return The Block which block is involved in this event
++     */
++    public Block getBlock() {
++        return blockClicked;
++    }
++
+     public boolean isCancelled() {
+         return cancelled;
+     }
