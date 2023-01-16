@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: RaymanoPL <raymanowy@gmail.com>
+Date: Mon, 21 Nov 2022 17:38:20 +0100
+Subject: [PATCH] Add-Method-Get-Block-In-Player-Bucket-Event
+
+
+diff --git a/src/main/java/net/minecraft/server/ItemBucket.java b/src/main/java/net/minecraft/server/ItemBucket.java
+index 41fea5bbfb4ecf239b88b1f095b07cfe5f76f31b..e76852451f4a332bd4048ab90575fa709a5258a2 100644
+--- a/src/main/java/net/minecraft/server/ItemBucket.java
++++ b/src/main/java/net/minecraft/server/ItemBucket.java
+@@ -127,7 +127,8 @@ public class ItemBucket extends Item {
+             } else {
+                 // CraftBukkit start
+                 if (entityhuman != null) {
+-                    PlayerBucketEmptyEvent event = CraftEventFactory.callPlayerBucketEmptyEvent(entityhuman, clicked.getX(), clicked.getY(), clicked.getZ(), enumdirection, itemstack);
++                    org.bukkit.block.Block block = world.getWorld().getBlockAt(blockposition.getX(), blockposition.getY(), blockposition.getZ());
++                    PlayerBucketEmptyEvent event = CraftEventFactory.callPlayerBucketEmptyEvent(entityhuman, block, clicked.getX(), clicked.getY(), clicked.getZ(), enumdirection, itemstack);
+                     if (event.isCancelled()) {
+                         // TODO: inventory not updated
+                         return false;
+diff --git a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+index bb3c42a9ec448655e45a26a58fc08f2ae14eed2e..671bbd935432669244847af1550070b56a6c97fd 100644
+--- a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
++++ b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+@@ -160,15 +160,24 @@ public class CraftEventFactory {
+     /**
+      * Bucket methods
+      */
++    @Deprecated
+     public static PlayerBucketEmptyEvent callPlayerBucketEmptyEvent(EntityHuman who, int clickedX, int clickedY, int clickedZ, EnumDirection clickedFace, ItemStack itemInHand) {
+-        return (PlayerBucketEmptyEvent) getPlayerBucketEvent(false, who, clickedX, clickedY, clickedZ, clickedFace, itemInHand, Items.BUCKET);
++        return callPlayerBucketEmptyEvent(who, null, clickedX, clickedY, clickedZ, clickedFace, itemInHand);
++    }
++
++    public static PlayerBucketEmptyEvent callPlayerBucketEmptyEvent(EntityHuman who, Block block, int clickedX, int clickedY, int clickedZ, EnumDirection clickedFace, ItemStack itemInHand) {
++        return (PlayerBucketEmptyEvent) getPlayerBucketEvent(false, who, block, clickedX, clickedY, clickedZ, clickedFace, itemInHand, Items.BUCKET);
+     }
+ 
+     public static PlayerBucketFillEvent callPlayerBucketFillEvent(EntityHuman who, int clickedX, int clickedY, int clickedZ, EnumDirection clickedFace, ItemStack itemInHand, net.minecraft.server.Item bucket) {
+-        return (PlayerBucketFillEvent) getPlayerBucketEvent(true, who, clickedX, clickedY, clickedZ, clickedFace, itemInHand, bucket);
++        return (PlayerBucketFillEvent) getPlayerBucketEvent(true, who, null, clickedX, clickedY, clickedZ, clickedFace, itemInHand, bucket);
++    }
++
++    private static PlayerEvent getPlayerBucketEvent(boolean isFilling, EntityHuman who, Block block, int clickedX, int clickedY, int clickedZ, EnumDirection clickedFace, ItemStack itemstack, net.minecraft.server.Item item) {
++        return getPlayerBucketEvent(isFilling, block, who, clickedX, clickedY, clickedZ, clickedFace, itemstack, item);
+     }
+ 
+-    private static PlayerEvent getPlayerBucketEvent(boolean isFilling, EntityHuman who, int clickedX, int clickedY, int clickedZ, EnumDirection clickedFace, ItemStack itemstack, net.minecraft.server.Item item) {
++    private static PlayerEvent getPlayerBucketEvent(boolean isFilling, Block block, EntityHuman who, int clickedX, int clickedY, int clickedZ, EnumDirection clickedFace, ItemStack itemstack, net.minecraft.server.Item item) {
+         Player player = (who == null) ? null : (Player) who.getBukkitEntity();
+         CraftItemStack itemInHand = CraftItemStack.asNewCraftStack(item);
+         Material bucket = CraftMagicNumbers.getMaterial(itemstack.getItem());
+@@ -184,7 +193,7 @@ public class CraftEventFactory {
+             event = new PlayerBucketFillEvent(player, blockClicked, blockFace, bucket, itemInHand);
+             ((PlayerBucketFillEvent) event).setCancelled(!canBuild(craftWorld, player, clickedX, clickedZ));
+         } else {
+-            event = new PlayerBucketEmptyEvent(player, blockClicked, blockFace, bucket, itemInHand);
++            event = new PlayerBucketEmptyEvent(player, block, blockClicked, blockFace, bucket, itemInHand);
+             ((PlayerBucketEmptyEvent) event).setCancelled(!canBuild(craftWorld, player, clickedX, clickedZ));
+         }
+ 
