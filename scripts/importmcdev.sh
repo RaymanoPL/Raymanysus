@@ -74,13 +74,14 @@ for f in $files; do
 done
 
 # Dionysus Modifications
-import MathHelper
 import EntityBat
 import EnumDirection
+import ItemEndCrystal
+import MathHelper
 import PacketCompressor
 import PacketDecompressor
-import PacketEncrypter
 import PacketDecrypter
+import PacketEncrypter
 import StatisticWrapper
 
 ########################################################
