@@ -1,0 +1,81 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: RaymanoPL <raymanowy@gmail.com>
+Date: Mon, 25 Mar 2024 21:59:19 +0100
+Subject: [PATCH] Fix lily pad and update update()
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftBlockEntityState.java b/src/main/java/org/bukkit/craftbukkit/block/CraftBlockEntityState.java
+index 775a5b46ae423f4f3495fcc68b7305528e074ebf..8c250f537a4ae24021151c8041727ee96a54f0ec 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftBlockEntityState.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftBlockEntityState.java
+@@ -148,9 +148,17 @@ public class CraftBlockEntityState<T extends TileEntity> extends CraftBlockState
+ 
+     @Override
+     public void update(EntityHuman humanEntity) {
++        super.update(humanEntity);
+         if (humanEntity instanceof EntityPlayer entityPlayer) {
+-            super.update(humanEntity);
+             tileEntity.update(entityPlayer);
+         }
++        if (this.isPlaced()) {
++            TileEntity tile = getTileEntityFromWorld();
++
++            if (isApplicable(tile)) {
++                applyTo(tileEntityClass.cast(tile));
++                tile.update();
++            }
++        }
+     }
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftBlockState.java b/src/main/java/org/bukkit/craftbukkit/block/CraftBlockState.java
+index 41861e03756bbd67e4eaee0de7a8f1f7bc72213c..e4b7c585afbe89e2c21a9d78fb04bce03f528036 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftBlockState.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftBlockState.java
+@@ -177,6 +177,7 @@ public class CraftBlockState implements BlockState {
+     }
+ 
+     public void update(EntityHuman humanEntity) {
++        getBlock().setTypeIdAndData(getTypeId(), getRawData(), false, false);
+         if (humanEntity instanceof EntityPlayer entityPlayer) {
+             BlockPosition pos = new BlockPosition(x, y, z);
+             PacketPlayOutBlockChange packetPlayOutBlockChange = new PacketPlayOutBlockChange(world.getHandle(), pos);
+diff --git a/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java b/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java
+index 533b8e78f6edec6c19e43abb163bd36fe21c2c1b..137ab5e20d7ee296d96dd3e1abca35355cac90f6 100644
+--- a/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java
++++ b/src/main/java/org/bukkit/craftbukkit/block/CraftJukebox.java
+@@ -43,10 +43,20 @@ public class CraftJukebox extends CraftBlockEntityState<TileEntityRecordPlayer>
+ 
+     @Override
+     public void update(EntityHuman humanEntity) {
++        super.update(humanEntity);
+         if (humanEntity instanceof EntityPlayer entityPlayer) {
+-            super.update(humanEntity);
+-            if (this.getType() == Material.JUKEBOX) {
++            if (this.isPlaced() && this.getType() == Material.JUKEBOX) {
++                CraftWorld world = (CraftWorld) this.getWorld();
+                 Material record = this.getPlaying();
++                if (record == Material.AIR) {
++                    world.getHandle().setTypeAndData(new BlockPosition(this.getX(), this.getY(), this.getZ()),
++                            Blocks.JUKEBOX.getBlockData()
++                                    .set(BlockJukeBox.HAS_RECORD, false), 3);
++                } else {
++                    world.getHandle().setTypeAndData(new BlockPosition(this.getX(), this.getY(), this.getZ()),
++                            Blocks.JUKEBOX.getBlockData()
++                                    .set(BlockJukeBox.HAS_RECORD, true), 3);
++                }
+                 entityPlayer.getBukkitEntity().playEffect(this.getLocation(), Effect.RECORD_PLAY, record.getId());
+             }
+         }
+diff --git a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+index 671bbd935432669244847af1550070b56a6c97fd..20a060c7d5ffa3d04a742139e003ee497799c546 100644
+--- a/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
++++ b/src/main/java/org/bukkit/craftbukkit/event/CraftEventFactory.java
+@@ -151,7 +151,7 @@ public class CraftEventFactory {
+             equipmentSlot = EquipmentSlot.OFF_HAND;
+         }
+ 
+-        BlockPlaceEvent event = new BlockPlaceEvent(placedBlock, replacedBlockState, blockClicked, item, player, canBuild, equipmentSlot,sendable);
++        BlockPlaceEvent event = new BlockPlaceEvent(placedBlock, replacedBlockState, blockClicked, item, player, canBuild, equipmentSlot, sendable);
+         craftServer.getPluginManager().callEvent(event);
+ 
+         return event;
